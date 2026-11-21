@@ -68,7 +68,7 @@ input[type=range]{width:100%;accent-color:var(--accent);margin:0 0 6px}
 <aside class="panel">
   <header>
     <h1>Yatak odası</h1>
-    <p class="sub">Boş hal · 7 fotoğraftan kuruldu</p>
+    <p class="sub">Ebeveyn yatak odası · öneri yerleşim</p>
   </header>
   <div class="seg" role="group" aria-label="Görünüm">
     <button id="v-aerial" data-m="aerial" aria-pressed="true">Kuşbakışı</button>
@@ -89,18 +89,20 @@ input[type=range]{width:100%;accent-color:var(--accent);margin:0 0 6px}
       <p class="note">Metreyle ölçünce bu değerleri gir, oda ona göre yeniden kurulur.</p>
     </div>
   </details>
+  <label class="chk" for="in-furn"><input type="checkbox" id="in-furn" checked> Eşyaları göster</label>
   <label class="chk" for="in-tags"><input type="checkbox" id="in-tags" checked> Etiketleri göster</label>
 </aside>
 
 <script src="https://cdn.jsdelivr.net/npm/three@0.147.0/build/three.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/three@0.147.0/examples/js/controls/OrbitControls.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/three@0.147.0/examples/js/geometries/RoundedBoxGeometry.js"></script>
 <script>
 (function(){
 const $=s=>document.querySelector(s);
 const V=THREE.Vector3;
 const S={W:5.5,D:5.0,H:2.85};   /* ölçülen: pencere + kapı duvarı 5,5 m · bant pencere + balkon duvarı 5 m */
 const BW=0.5, DROP=0.27, T=0.22;
-let mode='aerial', showTags=true;
+let mode='aerial', showTags=true, showFurn=true;
 const reduce=matchMedia('(prefers-reduced-motion: reduce)').matches;
 
 /* seeded random so textures stay identical between loads */
@@ -132,6 +134,12 @@ const concreteTex=tex(512,(g,s)=>{g.fillStyle='#aba79f';g.fillRect(0,0,s,s);
 const wallTex=tex(256,(g,s)=>{g.fillStyle='#d4d7d8';g.fillRect(0,0,s,s);
   for(let i=0;i<5000;i++){g.fillStyle=R()<.5?'rgba(0,0,0,.025)':'rgba(255,255,255,.035)';g.fillRect(R()*s,R()*s,1,1);}});
 wallTex.repeat.set(.5,.5);
+const oakTex=tex(512,(g,s)=>{g.fillStyle='#b58d63';g.fillRect(0,0,s,s);
+  for(let i=0;i<180;i++){const x=R()*s;g.strokeStyle=R()<.5?`rgba(120,82,48,${.08+R()*.18})`:`rgba(222,190,150,${.06+R()*.14})`;
+    g.lineWidth=.5+R()*2.2;g.beginPath();g.moveTo(x,0);g.bezierCurveTo(x+R()*14-7,s*.33,x+R()*14-7,s*.66,x+R()*10-5,s);g.stroke();}});
+const rugTex=tex(512,(g,s)=>{g.fillStyle='#d9cdb8';g.fillRect(0,0,s,s);
+  for(let i=0;i<26000;i++){g.fillStyle=R()<.5?`rgba(150,130,105,${R()*.16})`:`rgba(250,244,232,${R()*.2})`;g.fillRect(R()*s,R()*s,1.4,1.4);}
+  g.strokeStyle='rgba(160,112,80,.55)';g.lineWidth=7;g.strokeRect(26,26,s-52,s-52);g.lineWidth=2;g.strokeRect(44,44,s-88,s-88);});
 const marbleTex=tex(512,(g,s)=>{g.fillStyle='#dcdad5';g.fillRect(0,0,s,s);
   for(let i=0;i<22;i++){g.strokeStyle=`rgba(105,102,97,${.12+R()*.3})`;g.lineWidth=.6+R()*2;g.beginPath();
     g.moveTo(R()*s,0);g.bezierCurveTo(R()*s,R()*s,R()*s,R()*s,R()*s,s);g.stroke();}});
@@ -159,6 +167,23 @@ const M={
   ground:new THREE.MeshLambertMaterial({color:0xc6b794}),
   villa:std({color:0xf1efe9}),
   roof:std({color:0xb5553a,roughness:.8}),
+  oak:std({map:oakTex,roughness:.6}),
+  oakDark:std({map:oakTex,color:0x8a6a50,roughness:.6}),
+  linen:std({color:0xefeae2,roughness:1}),
+  duvet:std({color:0xe6dfd3,roughness:1}),
+  throwM:std({color:0x9c6b4e,roughness:1}),
+  sage:std({color:0x8a9a86,roughness:1}),
+  boucle:std({color:0xeee8dc,roughness:1}),
+  rug:std({map:rugTex,roughness:1}),
+  brass:std({color:0xc6a165,roughness:.3,metalness:.85}),
+  black:std({color:0x18191b,roughness:.35}),
+  screen:std({color:0x0a0c0e,roughness:.15,metalness:.4}),
+  vanityTop:std({map:marbleTex,roughness:.25}),
+  mirror:std({color:0xdfe8ec,roughness:.03,metalness:1}),
+  glow:new THREE.MeshStandardMaterial({color:0xfff1d6,emissive:0xffdca6,emissiveIntensity:1.6}),
+  leaf:std({color:0x4f6e45,roughness:.8,side:THREE.DoubleSide}),
+  pot:std({color:0xcbbba6,roughness:.85}),
+  sheer:new THREE.MeshStandardMaterial({color:0xfbf8f2,transparent:true,opacity:.55,roughness:1,side:THREE.DoubleSide,depthWrite:false}),
 };
 
 /* ---------- lights ---------- */
@@ -288,6 +313,8 @@ function build(){
   rail(tx1,tz0,tx1,tz1,-.03,1.05);rail(tx0,tz0,tx1,tz0,-.03,1.05);rail(tx0,tz1,tx1,tz1,-.03,1.05);
   const wx0=W/2-win.u1,wx1=W/2-win.u0;rail(wx0-.05,D/2+T+.12,wx1+.05,D/2+T+.12,.15,.9);
 
+  furnish(win);
+
   /* labels */
   tag('Banyo',new V(bx,1.1,bz));
   tag('Koridor',new V(hx,1.1,hz+.4));
@@ -304,6 +331,120 @@ function build(){
   $('#o-w').value=fmt(W);$('#o-d').value=fmt(D);$('#o-h').value=fmt(H);
   $('#o-a').textContent=(W*D).toLocaleString('tr-TR',{maximumFractionDigits:1})+' m²';
   $('#o-hb').textContent=fmt(Hb);
+}
+
+/* ---------- furniture (öneri yerleşim) ----------
+   Koordinat: x = kapı/pencere duvarı yönü (W), z = bant pencere duvarı yönü (D). Duvar B (bant pencere) x=-W/2, duvar C (TV, balkon) x=+W/2,
+   duvar D (büyük pencere) z=+D/2, duvar A (kapılar) z=-D/2. */
+let furn=null;
+function rbox(p,w,h,d,x,y,z,mat,r){r=r??Math.min(w,h,d)*.18;
+  const geo=THREE.RoundedBoxGeometry?new THREE.RoundedBoxGeometry(w,h,d,3,r):new THREE.BoxGeometry(w,h,d);
+  const m=new THREE.Mesh(geo,mat);m.position.set(x,y,z);m.castShadow=m.receiveShadow=true;p.add(m);return m;}
+function cyl(p,rt,rb,h,x,y,z,mat,seg=28){const m=new THREE.Mesh(new THREE.CylinderGeometry(rt,rb,h,seg),mat);m.position.set(x,y,z);m.castShadow=m.receiveShadow=true;p.add(m);return m;}
+function lampLight(p,x,y,z,inten,dist){const l=new THREE.PointLight(0xffcf96,inten,dist,2);l.position.set(x,y,z);p.add(l);return l;}
+
+function furnish(win){
+  const {W,D,H}=S,Hb=H-DROP;
+  furn=new THREE.Group();furn.visible=showFurn;room.add(furn);const F=furn;
+  const xB=-W/2, xC=W/2, zD=D/2, zA=-D/2;
+  const zc=D/2-(.3+D-.55)/2;                    // bant pencerenin tam ortası
+
+  /* yatak başı duvarı: dikey meşe çıtalar, bant pencerenin altında biter */
+  const slH=Math.min(2.0,Hb-.62), span=3.3;
+  box(F,.02,slH,span,xB+.01,slH/2,zc,M.oakDark,false);
+  for(let z=zc-span/2+.03;z<zc+span/2-.02;z+=.075) box(F,.035,slH,.04,xB+.035,slH/2,z,M.oak,false);
+
+  /* 180×200 yatak: kumaş başlık, kalın şilte, nevresim, şal, yastıklar */
+  const bx0=xB+.1, L=2.08, BWd=1.94;
+  box(F,L-.1,.08,BWd-.14,bx0+L/2,.04,zc,M.black);
+  rbox(F,L,.26,BWd,bx0+L/2,.21,zc,M.sage,.05);
+  rbox(F,.14,1.05,BWd+.08,bx0+.04,.78,zc,M.sage,.06);
+  rbox(F,2.0,.22,1.8,bx0+.07+1.0,.45,zc,M.linen,.06);
+  rbox(F,1.5,.07,1.88,bx0+.07+1.27,.585,zc,M.duvet,.03);
+  rbox(F,.55,.075,1.92,bx0+.07+1.72,.61,zc,M.throwM,.03);
+  [-.45,.45].forEach(dz=>{rbox(F,.42,.17,.72,bx0+.38,.64,zc+dz,M.linen,.07);rbox(F,.3,.32,.5,bx0+.28,.7,zc+dz*.95,M.duvet,.1).rotation.z=-.35;});
+  rbox(F,.2,.26,.52,bx0+.52,.66,zc,M.throwM,.08).rotation.z=-.3;
+
+  /* halı + ayak ucunda bench */
+  const rug=new THREE.Mesh(new THREE.BoxGeometry(2.7,.012,3.1),M.rug);rug.position.set(xB+1.85,.006,zc);rug.receiveShadow=true;F.add(rug);
+  const bnX=bx0+L+.32;
+  rbox(F,.42,.1,1.3,bnX,.4,zc,M.boucle,.04);box(F,.38,.04,1.24,bnX,.33,zc,M.oak);
+  [[-1,-1],[1,-1],[-1,1],[1,1]].forEach(([a,b])=>cyl(F,.018,.014,.31,bnX+a*.16,.155,zc+b*.58,M.black,10));
+
+  /* komodinler (yüzer) + tavandan sarkan küre lambalar */
+  const bedHalf=BWd/2, nsW=.45;
+  [zc+bedHalf+.03+nsW/2, zc-bedHalf-.03-nsW/2].forEach(z=>{
+    rbox(F,.4,.26,nsW,xB+.2,.48,z,M.oak,.02);box(F,.005,.005,nsW*.5,xB+.401,.48,z,M.brass,false);
+    cyl(F,.003,.003,Hb-1.12,xB+.32,(Hb+1.12)/2,z,M.black,6);
+    const g=new THREE.Mesh(new THREE.SphereGeometry(.09,24,16),M.glow);g.position.set(xB+.32,1.04,z);F.add(g);
+    lampLight(F,xB+.32,1.0,z,.55,3.2);
+    rbox(F,.16,.03,.12,xB+.18,.625,z+.05,M.oakDark,.01);rbox(F,.1,.12,.02,xB+.12,.68,z-.08,M.black,.005);
+  });
+
+  /* gardıroplar: bant pencerenin altına sığan, kanalı (fluted) meşe kapaklı, pirinç kulplu */
+  const wdH=Math.min(2.0,Hb-.6), wdD=.6;
+  const ns1=zc+bedHalf+.06+nsW, ns2=zc-bedHalf-.06-nsW;
+  [[ns1+.02,zD-.03],[zA+.25,ns2-.02]].forEach(([z0,z1])=>{const w=z1-z0,zm=(z0+z1)/2;
+    box(F,wdD,wdH,w,xB+wdD/2,wdH/2,zm,M.oak);
+    const n=Math.max(1,Math.round(w/.45));
+    for(let k=1;k<n;k++) box(F,.006,wdH-.04,.006,xB+wdD+.003,wdH/2,z0+w*k/n,M.black,false);
+    for(let z=z0+.03;z<z1-.02;z+=.035) box(F,.012,wdH-.08,.014,xB+wdD+.006,wdH/2,z,M.oakDark,false);
+    for(let k=0;k<n;k++){const zz=z0+w*(k+.5)/n+(k%2?-1:1)*(w/n/2-.06);box(F,.02,.32,.016,xB+wdD+.02,1.05,zz,M.brass);}
+  });
+
+  /* TV duvarı: yüzer meşe ünite + duvara monte 65" ekran (balkon kapısına çarpmaz) */
+  const tvZ=-.05, conW=1.75;
+  box(F,.42,.34,conW,xC-.21,.42,tvZ,M.oak);
+  for(let k=1;k<3;k++) box(F,.004,.3,.004,xC-.42,.42,tvZ-conW/2+conW*k/3,M.black,false);
+  box(F,.04,.82,1.45,xC-.03,1.32,tvZ,M.black);
+  const sc=new THREE.Mesh(new THREE.PlaneGeometry(1.41,.78),M.screen);sc.position.set(xC-.052,1.32,tvZ);sc.rotation.y=-Math.PI/2;F.add(sc);
+  cyl(F,.06,.07,.18,xC-.25,.68,tvZ+.6,M.pot);rbox(F,.22,.04,.16,xC-.22,.61,tvZ-.55,M.oakDark,.01);
+  const lp=lampLight(F,xC-.06,1.32,tvZ,.25,1.2);lp.color.set(0xc9dcff);
+
+  /* makyaj masası: büyük pencerenin yanında (gün ışığı yandan), mermer üst, ışıklı yuvarlak ayna, puf */
+  const vx=Math.min(xC-1.2,win?W/2-win.u0+.55+.6:1.4), vz=zD-.24;
+  rbox(F,1.2,.05,.46,vx,.76,vz,M.vanityTop,.012);
+  box(F,1.1,.12,.4,vx,.67,vz,M.oak);
+  [[-1,-1],[1,-1],[-1,1],[1,1]].forEach(([a,b])=>cyl(F,.012,.012,.61,vx+a*.56,.305,vz+b*.19,M.brass,10));
+  const mr=new THREE.Mesh(new THREE.CircleGeometry(.4,48),M.mirror);mr.position.set(vx,1.4,zD-.012);mr.rotation.y=Math.PI;F.add(mr);
+  const ring=new THREE.Mesh(new THREE.TorusGeometry(.415,.018,12,64),M.glow);ring.position.set(vx,1.4,zD-.02);F.add(ring);
+  lampLight(F,vx,1.4,zD-.35,.45,2.4);
+  cyl(F,.035,.035,.13,vx-.4,.85,vz+.05,M.glow,16);cyl(F,.025,.03,.11,vx-.3,.84,vz-.02,M.brass,16);cyl(F,.03,.03,.08,vx+.42,.825,vz,M.mirror,16);
+  rbox(F,.22,.02,.14,vx+.25,.795,vz+.05,M.brass,.006);
+  cyl(F,.21,.19,.42,vx,.21,vz-.58,M.boucle,32);
+
+  /* okuma köşesi: pencerenin bant pencere tarafında koltuk, sehpa, ark lamba */
+  const ax=Math.max(xB+wdD+1.0,win?W/2-win.u1-.2:-1.2), az=zD-.62;   // gardırop kapaklarının açılma alanının dışında
+  const ch=new THREE.Group();ch.position.set(ax,0,az);ch.rotation.y=Math.PI*.82;F.add(ch);
+  rbox(ch,.82,.38,.78,0,.25,0,M.boucle,.16);rbox(ch,.82,.5,.2,0,.6,-.32,M.boucle,.1);
+  rbox(ch,.16,.32,.7,-.37,.5,0,M.boucle,.08);rbox(ch,.16,.32,.7,.37,.5,0,M.boucle,.08);
+  rbox(ch,.4,.12,.32,.02,.48,-.05,M.throwM,.05);
+  cyl(F,.2,.2,.03,ax+.6,.5,az+.1,M.oak,32);cyl(F,.015,.015,.5,ax+.6,.25,az+.1,M.black,10);
+  cyl(F,.012,.012,1.7,ax+.42,.85,zD-.15,M.black,8);
+  const arm=new THREE.Mesh(new THREE.TubeGeometry(new THREE.QuadraticBezierCurve3(new V(ax+.42,1.7,zD-.15),new V(ax+.25,2.05,az+.05),new V(ax+.05,1.55,az-.15)),24,.01,6),M.black);F.add(arm);
+  const sh=new THREE.Mesh(new THREE.ConeGeometry(.15,.16,24,1,true),M.black);sh.position.set(ax+.05,1.48,az-.15);F.add(sh);
+  lampLight(F,ax+.05,1.4,az-.15,.35,2.2);
+
+  /* tül perdeler (büyük pencere), rustik saksıda bitki */
+  if(win){const wxa=W/2-win.u1, wxb=W/2-win.u0;box(F,(wxb-wxa)+.9,.02,.02,(wxa+wxb)/2,Hb-.06,zD-.09,M.black,false);
+    [[wxa-.22,.6],[wxb+.22,.6]].forEach(([x,w])=>{const geo=new THREE.PlaneGeometry(w,Hb-.1,24,1);const p=geo.attributes.position;
+      for(let i=0;i<p.count;i++)p.setZ(i,Math.sin(p.getX(i)*28)*.025);geo.computeVertexNormals();
+      const c=new THREE.Mesh(geo,M.sheer);c.position.set(x,(Hb-.1)/2,zD-.12);F.add(c);});}
+  const px=xC-.3, pz=zD-.3;                    // koridor kapısının açılma alanı dışında, makyaj masasının köşesi
+  cyl(F,.2,.16,.42,px,.21,pz,M.pot);cyl(F,.012,.012,.9,px,.85,pz,M.oakDark,6);
+  for(let i=0;i<34;i++){const a=R()*Math.PI*2,y=.9+R()*.95,r=.08+R()*.28;
+    const lf=new THREE.Mesh(new THREE.CircleGeometry(.09+R()*.05,10),M.leaf);lf.scale.set(1,1.35,1);lf.position.set(px+Math.cos(a)*r,y,pz+Math.sin(a)*r);
+    lf.rotation.set(R()*1.2-.6,a+Math.PI/2,R()*.8-.4);lf.castShadow=true;F.add(lf);}
+
+  tag('Yatak 180×200',new V(bx0+1.2,.75,zc),'',['aerial','plan','inside']);
+  tag('Çıtalı yatak başı',new V(xB+.05,1.55,zc+.9),'',['aerial','inside']);
+  tag('Gardırop',new V(xB+.35,1.3,(ns1+zD)/2),'',['aerial','plan','inside']);
+  tag('Gardırop',new V(xB+.35,1.3,(zA+.25+ns2)/2),'',['aerial','plan','inside']);
+  tag('Komodin',new V(xB+.22,.75,ns2+nsW/2),'',['aerial','inside']);
+  tag('TV ünitesi',new V(xC-.25,1.9,tvZ),'',['aerial','plan','inside']);
+  tag('Makyaj masası',new V(vx,1.95,vz),'',['aerial','plan','inside']);
+  tag('Okuma köşesi',new V(ax,1.0,az),'',['aerial','plan','inside']);
+  tag('Bench',new V(bnX,.6,zc+.4),'',['plan']);
 }
 
 /* ---------- views ---------- */
@@ -346,12 +487,13 @@ const iw=$('#in-w'),id=$('#in-d'),ih=$('#in-h');iw.value=S.W;id.value=S.D;ih.val
 [iw,id,ih].forEach(el=>el.addEventListener('input',()=>{S.W=+iw.value;S.D=+id.value;S.H=+ih.value;build();
   if(mode==='inside'){const v=viewFor('inside');camera.position.copy(v.pos);controls.target.copy(v.tgt);}}));
 $('#in-tags').addEventListener('change',e=>{showTags=e.target.checked;});
+$('#in-furn').addEventListener('change',e=>{showFurn=e.target.checked;if(furn)furn.visible=showFurn;});
 if(innerWidth<600)$('#dims').open=false;
 
 function resize(){const w=stage.clientWidth,h=stage.clientHeight;renderer.setSize(w,h,false);camera.aspect=w/h;camera.updateProjectionMatrix();}
 addEventListener('resize',resize);resize();
 
-build();setMode('aerial',true);
+build();const qv=new URLSearchParams(location.search).get('v');setMode(['aerial','plan','inside'].includes(qv)?qv:'aerial',true);
 
 const ease=t=>t<.5?4*t*t*t:1-Math.pow(-2*t+2,3)/2;
 function loop(now){requestAnimationFrame(loop);
