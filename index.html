@@ -322,7 +322,7 @@ function build(){
   tag('Teras',new V((tx0+tx1)/2+.3,.15,0),'',['aerial','plan']);
   tag('Büyük pencere',at(gD,ucW,1.7));
   tag('Bant pencere',at(gB,(strip.u0+strip.u1)/2,strip.v0-.18));
-  tag('Kolon çıkıntısı',at(gC,1.15,1.3,.1),'',['aerial','inside']);
+  if(!showFurn) tag('Kolon çıkıntısı',at(gC,1.15,1.3,.1),'',['aerial','inside']);   // eşyalıyken TV paneli kolonu örter
   tag('Avize çıkışı',new V(0,H-.55,0),'',['aerial','inside']);
   const fmt=n=>n.toLocaleString('tr-TR',{minimumFractionDigits:2,maximumFractionDigits:2})+' m';
   tag(fmt(W),new V(0,.02,D/2-.3),'dim',['aerial','plan']);
@@ -349,16 +349,10 @@ function furnish(win){
   const xB=-W/2, xC=W/2, zD=D/2, zA=-D/2;
   const zc=D/2-(.3+D-.55)/2;                    // bant pencerenin tam ortası
 
-  /* yatak başı duvarı: dikey meşe çıtalar, bant pencerenin altında biter */
-  const slH=Math.min(2.0,Hb-.62), span=3.3;
-  box(F,.02,slH,span,xB+.01,slH/2,zc,M.oakDark,false);
-  for(let z=zc-span/2+.03;z<zc+span/2-.02;z+=.075) box(F,.035,slH,.04,xB+.035,slH/2,z,M.oak,false);
-
   /* 180×200 yatak: kumaş başlık, kalın şilte, nevresim, şal, yastıklar */
   const bx0=xB+.1, L=2.08, BWd=1.94;
   box(F,L-.1,.08,BWd-.14,bx0+L/2,.04,zc,M.black);
   rbox(F,L,.26,BWd,bx0+L/2,.21,zc,M.sage,.05);
-  rbox(F,.14,1.05,BWd+.08,bx0+.04,.78,zc,M.sage,.06);
   rbox(F,2.0,.22,1.8,bx0+.07+1.0,.45,zc,M.linen,.06);
   rbox(F,1.5,.07,1.88,bx0+.07+1.27,.585,zc,M.duvet,.03);
   rbox(F,.55,.075,1.92,bx0+.07+1.72,.61,zc,M.throwM,.03);
@@ -371,35 +365,66 @@ function furnish(win){
   rbox(F,.42,.1,1.3,bnX,.4,zc,M.boucle,.04);box(F,.38,.04,1.24,bnX,.33,zc,M.oak);
   [[-1,-1],[1,-1],[-1,1],[1,1]].forEach(([a,b])=>cyl(F,.018,.014,.31,bnX+a*.16,.155,zc+b*.58,M.black,10));
 
-  /* komodinler (yüzer) + tavandan sarkan küre lambalar */
+  /* GÖMME YATAK DUVARI: gardırop – asma köprü dolap – gardırop, tek parça meşe; bant pencere üstte açık kalır */
   const bedHalf=BWd/2, nsW=.45;
+  const jH=Math.min(2.0,Hb-.58), wdD=.6, brD=.42, brY0=jH-.42;          // köprü dolap: brY0 … jH
+  const ns1=zc+bedHalf+.06+nsW, ns2=zc-bedHalf-.06-nsW;                  // niş sınırları (komodinler dahil)
+  const nz0=ns2, nz1=ns1, nW=nz1-nz0, nzm=(nz0+nz1)/2;
+  // niş arka paneli: dikey çıtalar
+  box(F,.02,brY0,nW,xB+.01,brY0/2,nzm,M.oakDark,false);
+  for(let z=nz0+.03;z<nz1-.02;z+=.06) box(F,.03,brY0,.035,xB+.03,brY0/2,z,M.oak,false);
+  // köprü dolap + itmeli kapak derzleri + altında LED
+  box(F,brD,jH-brY0,nW,xB+brD/2,(brY0+jH)/2,nzm,M.oak);
+  for(let k=1;k<6;k++) box(F,.004,jH-brY0-.04,.004,xB+brD+.002,(brY0+jH)/2,nz0+nW*k/6,M.black,false);
+  const led=new THREE.Mesh(new THREE.BoxGeometry(.02,.01,nW-.06),M.glow);led.position.set(xB+brD-.05,brY0-.006,nzm);F.add(led);
+  [-.33,0,.33].forEach(f=>lampLight(F,xB+.2,brY0-.15,nzm+f*nW,.35,1.8));
+  // kapitoneli (dikey kanallı) kumaş yatak başı
+  const hbW=BWd+.12, hbN=12, chW=hbW/hbN;
+  box(F,.03,.98,hbW,xB+.07,.82,zc,M.sage,false);
+  for(let k=0;k<hbN;k++) rbox(F,.07,.96,chW-.01,xB+.11,.82,zc-hbW/2+chW*(k+.5),M.sage,.03);
+  // nişe gömülü yüzer komodinler + köprü dolaptan sarkan küre lambalar
   [zc+bedHalf+.03+nsW/2, zc-bedHalf-.03-nsW/2].forEach(z=>{
-    rbox(F,.4,.26,nsW,xB+.2,.48,z,M.oak,.02);box(F,.005,.005,nsW*.5,xB+.401,.48,z,M.brass,false);
-    cyl(F,.003,.003,Hb-1.12,xB+.32,(Hb+1.12)/2,z,M.black,6);
-    const g=new THREE.Mesh(new THREE.SphereGeometry(.09,24,16),M.glow);g.position.set(xB+.32,1.04,z);F.add(g);
-    lampLight(F,xB+.32,1.0,z,.55,3.2);
-    rbox(F,.16,.03,.12,xB+.18,.625,z+.05,M.oakDark,.01);rbox(F,.1,.12,.02,xB+.12,.68,z-.08,M.black,.005);
+    rbox(F,.4,.24,nsW,xB+.2,.48,z,M.oak,.02);box(F,.005,.005,nsW*.5,xB+.401,.48,z,M.brass,false);
+    cyl(F,.003,.003,brY0-1.1,xB+.3,(brY0+1.1)/2,z,M.black,6);
+    const g=new THREE.Mesh(new THREE.SphereGeometry(.085,24,16),M.glow);g.position.set(xB+.3,1.03,z);F.add(g);
+    lampLight(F,xB+.3,1.0,z,.45,2.8);
+    rbox(F,.16,.03,.12,xB+.18,.615,z+.05,M.oakDark,.01);rbox(F,.1,.12,.02,xB+.12,.67,z-.08,M.black,.005);
   });
-
-  /* gardıroplar: bant pencerenin altına sığan, kanalı (fluted) meşe kapaklı, pirinç kulplu */
-  const wdH=Math.min(2.0,Hb-.6), wdD=.6;
-  const ns1=zc+bedHalf+.06+nsW, ns2=zc-bedHalf-.06-nsW;
-  [[ns1+.02,zD-.03],[zA+.25,ns2-.02]].forEach(([z0,z1])=>{const w=z1-z0,zm=(z0+z1)/2;
-    box(F,wdD,wdH,w,xB+wdD/2,wdH/2,zm,M.oak);
+  // boy gardıroplar (nişin iki yanında), kanallı kapak, pirinç kulp
+  [[ns1+.01,zD-.02],[zA+.02,ns2-.01]].forEach(([z0,z1])=>{const w=z1-z0,zm=(z0+z1)/2;
+    box(F,wdD,jH,w,xB+wdD/2,jH/2,zm,M.oak);
     const n=Math.max(1,Math.round(w/.45));
-    for(let k=1;k<n;k++) box(F,.006,wdH-.04,.006,xB+wdD+.003,wdH/2,z0+w*k/n,M.black,false);
-    for(let z=z0+.03;z<z1-.02;z+=.035) box(F,.012,wdH-.08,.014,xB+wdD+.006,wdH/2,z,M.oakDark,false);
+    for(let k=1;k<n;k++) box(F,.006,jH-.04,.006,xB+wdD+.003,jH/2,z0+w*k/n,M.black,false);
+    for(let z=z0+.03;z<z1-.02;z+=.035) box(F,.012,jH-.08,.014,xB+wdD+.006,jH/2,z,M.oakDark,false);
     for(let k=0;k<n;k++){const zz=z0+w*(k+.5)/n+(k%2?-1:1)*(w/n/2-.06);box(F,.02,.32,.016,xB+wdD+.02,1.05,zz,M.brass);}
   });
+  box(F,wdD+.01,.03,D-.04,xB+wdD/2,jH+.015,0,M.oakDark,false);        // üst kapak: tek parça görünüm
 
-  /* TV duvarı: yüzer meşe ünite + duvara monte 65" ekran (balkon kapısına çarpmaz) */
-  const tvZ=-.05, conW=1.75;
-  box(F,.42,.34,conW,xC-.21,.42,tvZ,M.oak);
-  for(let k=1;k<3;k++) box(F,.004,.3,.004,xC-.42,.42,tvZ-conW/2+conW*k/3,M.black,false);
-  box(F,.04,.82,1.45,xC-.03,1.32,tvZ,M.black);
-  const sc=new THREE.Mesh(new THREE.PlaneGeometry(1.41,.78),M.screen);sc.position.set(xC-.052,1.32,tvZ);sc.rotation.y=-Math.PI/2;F.add(sc);
-  cyl(F,.06,.07,.18,xC-.25,.68,tvZ+.6,M.pot);rbox(F,.22,.04,.16,xC-.22,.61,tvZ-.55,M.oakDark,.01);
-  const lp=lampLight(F,xC-.06,1.32,tvZ,.25,1.2);lp.color.set(0xc9dcff);
+  /* TV DUVARI: kolonu da örten koyu çıtalı panel + arkadan ışık, yüzer ünite, 65" ekran */
+  const tvZ=-.05, conW=1.75, pz0=-D/2+.9, pz1=Math.min(.95,D/2-1.5-.05);   // kolon … balkon kapısı arası
+  box(F,.06,Hb-.02,pz1-pz0,xC-.03,(Hb-.02)/2,(pz0+pz1)/2,M.oakDark,false);
+  for(let z=pz0+.03;z<pz1-.02;z+=.06) box(F,.03,Hb-.06,.032,xC-.075,(Hb-.02)/2,z,M.oakDark,false);
+  box(F,.42,.34,conW,xC-.3,.42,tvZ,M.oak);
+  for(let k=1;k<3;k++) box(F,.004,.3,.004,xC-.51,.42,tvZ-conW/2+conW*k/3,M.black,false);
+  box(F,.04,.82,1.45,xC-.11,1.32,tvZ,M.black);
+  const sc=new THREE.Mesh(new THREE.PlaneGeometry(1.41,.78),M.screen);sc.position.set(xC-.132,1.32,tvZ);sc.rotation.y=-Math.PI/2;F.add(sc);
+  const bl=lampLight(F,xC-.1,1.32,tvZ,.6,1.4);bl.color.set(0xffd9a8);
+  cyl(F,.06,.07,.18,xC-.33,.68,tvZ+.6,M.pot);rbox(F,.22,.04,.16,xC-.3,.61,tvZ-.55,M.oakDark,.01);
+
+  /* raf ünitesi: koridor kapısı köşesi ile kolon arası, yüzer açık raflar + dekor */
+  const sz0=zA+.12, sz1=pz0-.12, sD=.3, szm=(sz0+sz1)/2, sw=sz1-sz0;
+  [sz0,sz1].forEach(z=>box(F,sD,1.9,.025,xC-sD/2,1.25,z,M.oak));
+  const shelfY=[.38,.78,1.18,1.58,1.98];
+  shelfY.forEach(y=>box(F,sD,.025,sw,xC-sD/2,y,szm,M.oak));
+  const BOOK=[0x2e4a52,0xb39470,0x6b4a3a,0xd8cfc0,0x8a9a86,0x3b3b3b,0xa86a4e];
+  const bookMat=BOOK.map(c=>std({color:c,roughness:.8}));
+  [[.38,0],[1.18,1],[1.58,0]].forEach(([y,side])=>{let z=side?szm:sz0+.05;const end=side?sz1-.05:szm;
+    while(z<end-.04){const t=.025+R()*.025,h=.18+R()*.1;box(F,.2,h,t,xC-.16,y+.013+h/2,z+t/2,bookMat[(R()*BOOK.length)|0]);z+=t+.003;}});
+  cyl(F,.05,.07,.24,xC-.15,.78+.135,szm-.12,M.pot);cyl(F,.04,.04,.14,xC-.15,.78+.08,szm+.1,M.black);
+  cyl(F,.07,.06,.12,xC-.15,1.98+.072,szm,M.pot);
+  for(let i=0;i<12;i++){const a=R()*6.28;const lf=new THREE.Mesh(new THREE.CircleGeometry(.05,8),M.leaf);
+    lf.position.set(xC-.15+Math.cos(a)*.08,2.06+R()*.1,szm+Math.sin(a)*.08);lf.rotation.set(R(),a,R());F.add(lf);}
+  rbox(F,.03,.26,.2,xC-.24,.38+.14,szm+.18,M.oakDark,.01);rbox(F,.15,.1,.15,xC-.15,1.18+.065,sz0+.15,M.vanityTop,.02);
 
   /* makyaj masası: büyük pencerenin yanında (gün ışığı yandan), mermer üst, ışıklı yuvarlak ayna, puf */
   const vx=Math.min(xC-1.2,win?W/2-win.u0+.55+.6:1.4), vz=zD-.24;
@@ -413,17 +438,24 @@ function furnish(win){
   rbox(F,.22,.02,.14,vx+.25,.795,vz+.05,M.brass,.006);
   cyl(F,.21,.19,.42,vx,.21,vz-.58,M.boucle,32);
 
-  /* okuma köşesi: pencerenin bant pencere tarafında koltuk, sehpa, ark lamba */
-  const ax=Math.max(xB+wdD+1.0,win?W/2-win.u1-.2:-1.2), az=zD-.62;   // gardırop kapaklarının açılma alanının dışında
-  const ch=new THREE.Group();ch.position.set(ax,0,az);ch.rotation.y=Math.PI*.82;F.add(ch);
+  /* OKUMA KÖŞESİ: banyo kapısı ile koridor kapısı arasındaki duvar (iki kapının açılma alanı dışında) */
+  const ax=(-W/2+1.95+W-1.35-W/2)/2, az=zA+.62;
+  const ch=new THREE.Group();ch.position.set(ax,0,az);ch.rotation.y=-.28;F.add(ch);
   rbox(ch,.82,.38,.78,0,.25,0,M.boucle,.16);rbox(ch,.82,.5,.2,0,.6,-.32,M.boucle,.1);
   rbox(ch,.16,.32,.7,-.37,.5,0,M.boucle,.08);rbox(ch,.16,.32,.7,.37,.5,0,M.boucle,.08);
   rbox(ch,.4,.12,.32,.02,.48,-.05,M.throwM,.05);
-  cyl(F,.2,.2,.03,ax+.6,.5,az+.1,M.oak,32);cyl(F,.015,.015,.5,ax+.6,.25,az+.1,M.black,10);
-  cyl(F,.012,.012,1.7,ax+.42,.85,zD-.15,M.black,8);
-  const arm=new THREE.Mesh(new THREE.TubeGeometry(new THREE.QuadraticBezierCurve3(new V(ax+.42,1.7,zD-.15),new V(ax+.25,2.05,az+.05),new V(ax+.05,1.55,az-.15)),24,.01,6),M.black);F.add(arm);
-  const sh=new THREE.Mesh(new THREE.ConeGeometry(.15,.16,24,1,true),M.black);sh.position.set(ax+.05,1.48,az-.15);F.add(sh);
-  lampLight(F,ax+.05,1.4,az-.15,.35,2.2);
+  cyl(F,.2,.2,.03,ax+.68,.5,az-.12,M.oak,32);cyl(F,.015,.015,.5,ax+.68,.25,az-.12,M.black,10);
+  rbox(F,.16,.05,.12,ax+.66,.54,az-.1,M.throwM,.01);
+  cyl(F,.012,.012,1.7,ax-.5,.85,zA+.18,M.black,8);cyl(F,.12,.12,.02,ax-.5,.01,zA+.18,M.black,24);
+  const arm=new THREE.Mesh(new THREE.TubeGeometry(new THREE.QuadraticBezierCurve3(new V(ax-.5,1.7,zA+.18),new V(ax-.25,2.05,az-.05),new V(ax-.02,1.55,az+.12)),24,.01,6),M.black);F.add(arm);
+  const sh=new THREE.Mesh(new THREE.ConeGeometry(.15,.16,24,1,true),M.black);sh.position.set(ax-.02,1.48,az+.12);F.add(sh);
+  lampLight(F,ax-.02,1.4,az+.12,.35,2.2);
+  // koltuğun üstünde çerçeveli tablo
+  box(F,.9,.62,.03,ax,1.55,zA+.016,M.oakDark);
+  const art=new THREE.Mesh(new THREE.PlaneGeometry(.82,.54),std({map:tex(256,(g,s)=>{g.fillStyle='#ece5d8';g.fillRect(0,0,s,s);
+    g.fillStyle='#a8755a';g.beginPath();g.arc(s*.38,s*.55,s*.22,0,7);g.fill();g.fillStyle='#8a9a86';g.fillRect(s*.5,s*.2,s*.32,s*.5);
+    g.strokeStyle='#2e3a3e';g.lineWidth=3;g.beginPath();g.moveTo(s*.1,s*.82);g.bezierCurveTo(s*.4,s*.7,s*.6,s*.92,s*.9,s*.78);g.stroke();})}));
+  art.position.set(ax,1.55,zA+.033);F.add(art);
 
   /* tül perdeler (büyük pencere), rustik saksıda bitki */
   if(win){const wxa=W/2-win.u1, wxb=W/2-win.u0;box(F,(wxb-wxa)+.9,.02,.02,(wxa+wxb)/2,Hb-.06,zD-.09,M.black,false);
@@ -437,11 +469,11 @@ function furnish(win){
     lf.rotation.set(R()*1.2-.6,a+Math.PI/2,R()*.8-.4);lf.castShadow=true;F.add(lf);}
 
   tag('Yatak 180×200',new V(bx0+1.2,.75,zc),'',['aerial','plan','inside']);
-  tag('Çıtalı yatak başı',new V(xB+.05,1.55,zc+.9),'',['aerial','inside']);
+  tag('Gömme yatak duvarı',new V(xB+.45,brY0-.12,zc-.75),'',['aerial','inside']);
   tag('Gardırop',new V(xB+.35,1.3,(ns1+zD)/2),'',['aerial','plan','inside']);
-  tag('Gardırop',new V(xB+.35,1.3,(zA+.25+ns2)/2),'',['aerial','plan','inside']);
-  tag('Komodin',new V(xB+.22,.75,ns2+nsW/2),'',['aerial','inside']);
-  tag('TV ünitesi',new V(xC-.25,1.9,tvZ),'',['aerial','plan','inside']);
+  tag('Gardırop',new V(xB+.35,1.3,(zA+ns2)/2),'',['aerial','plan','inside']);
+  tag('TV duvarı',new V(xC-.25,1.95,tvZ),'',['aerial','plan','inside']);
+  tag('Raflar',new V(xC-.2,1.4,szm),'',['aerial','plan','inside']);
   tag('Makyaj masası',new V(vx,1.95,vz),'',['aerial','plan','inside']);
   tag('Okuma köşesi',new V(ax,1.0,az),'',['aerial','plan','inside']);
   tag('Bench',new V(bnX,.6,zc+.4),'',['plan']);
@@ -487,7 +519,7 @@ const iw=$('#in-w'),id=$('#in-d'),ih=$('#in-h');iw.value=S.W;id.value=S.D;ih.val
 [iw,id,ih].forEach(el=>el.addEventListener('input',()=>{S.W=+iw.value;S.D=+id.value;S.H=+ih.value;build();
   if(mode==='inside'){const v=viewFor('inside');camera.position.copy(v.pos);controls.target.copy(v.tgt);}}));
 $('#in-tags').addEventListener('change',e=>{showTags=e.target.checked;});
-$('#in-furn').addEventListener('change',e=>{showFurn=e.target.checked;if(furn)furn.visible=showFurn;});
+$('#in-furn').addEventListener('change',e=>{showFurn=e.target.checked;build();});
 if(innerWidth<600)$('#dims').open=false;
 
 function resize(){const w=stage.clientWidth,h=stage.clientHeight;renderer.setSize(w,h,false);camera.aspect=w/h;camera.updateProjectionMatrix();}
